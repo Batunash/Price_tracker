@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 import os
 import sys
 import json
+import subprocess
 
 URL = "https://www.trendyol.com/apple/iphone-13-128-gb-yildiz-isigi-cep-telefonu-apple-turkiye-garantili-p-150059024"
 
@@ -20,7 +21,7 @@ PRICES_FILE = "prices.json"
 # ---------------- EMAIL ----------------
 def send_email(subject, message):
     if not EMAIL_ADDRESS or not EMAIL_PASSWORD or not TO_EMAIL:
-        print("❌ Mail env değişkenleri yok!")
+        print("❌ Mail ENV değişkenleri yok!")
         return
 
     msg = MIMEText(message)
@@ -58,11 +59,13 @@ def fetch_price(url):
 
 
 def normalize_price(text):
-    t = (text.replace("TL", "")
-             .replace("₺", "")
-             .replace(".", "")
-             .replace(",", ".")
-             .strip())
+    t = (
+        text.replace("TL", "")
+        .replace("₺", "")
+        .replace(".", "")
+        .replace(",", ".")
+        .strip()
+    )
     try:
         return float(t)
     except:
@@ -87,46 +90,57 @@ def save_last_price(price):
         json.dump({"last_price": price}, f)
 
 
+# ---------------- GIT PUSH ----------------
+def git_commit_and_push():
+    try:
+        subprocess.run(["git", "config", "--global", "user.email", "actions@github.com"])
+        subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"])
+
+        subprocess.run(["git", "add", PRICES_FILE])
+        subprocess.run(["git", "commit", "-m", "Update price"], check=False)
+        subprocess.run(["git", "push"])
+        print("📌 prices.json repo'ya pushlandı!")
+    except Exception as e:
+        print("❌ Git push hatası:", e)
+
+
 # ---------------- MAIN ----------------
 def main():
     price_text = fetch_price(URL)
     if not price_text:
         print("❌ Fiyat bulunamadı!")
-        if "--send-mail" in sys.argv:
-            send_email("Fiyat HATASI", f"Fiyat bulunamadı!\n{URL}")
         return
 
     price = normalize_price(price_text)
-
     print(f"🔍 Şu anki fiyat: {price} TL")
 
     last_price = load_last_price()
 
-    # --------- Saatlik rapor maili ---------
+    # Saatlik workflow → her zaman mail at
     if "--send-mail" in sys.argv:
-        send_email(
-            "Saatlik Fiyat Raporu",
-            f"Anlık fiyat: {price} TL\n\nURL: {URL}"
-        )
+        send_email("Saatlik Fiyat Raporu", f"Anlık fiyat: {price} TL\n{URL}")
         save_last_price(price)
+        git_commit_and_push()
         return
 
-    # --------- 15 dakikalık düşüş kontrolü ---------
+    # 15 dk workflow → sadece fiyat düşüşü algılar
     if last_price is None:
         print("📁 İlk defa fiyat kaydediliyor.")
         save_last_price(price)
+        git_commit_and_push()
         return
 
     if price < last_price:
         print(f"🔥 Fiyat düştü! {last_price} → {price}")
         send_email(
             "⚠ Fiyat Düştü!",
-            f"Fiyat düştü!\n{last_price} → {price}\n\nURL: {URL}"
+            f"Fiyat düştü!\n{last_price} → {price}\n\n{URL}",
         )
     else:
         print("⏳ Fiyat aynı veya daha yüksek → mail yok.")
 
     save_last_price(price)
+    git_commit_and_push()
 
 
 if __name__ == "__main__":

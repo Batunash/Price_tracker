@@ -1,4 +1,6 @@
 name: Price Check (15 min)
+permissions:
+  contents: write
 
 on:
   schedule:

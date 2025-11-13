@@ -1,4 +1,6 @@
 name: Hourly Price Mail
+permissions:
+  contents: write
 
 on:
   schedule:
