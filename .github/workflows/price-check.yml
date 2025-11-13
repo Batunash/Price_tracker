@@ -1,0 +1,27 @@
+name: Price Check (15 min)
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # her 15 dk
+  workflow_dispatch:
+
+jobs:
+  check-price:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml
+
+      - name: Run tracker (no mail)
+        run: |
+          python price_tracker.py
