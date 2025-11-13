@@ -1,10 +1,11 @@
 name: Price Check (15 min)
+
 permissions:
   contents: write
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # her 15 dk
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -24,6 +25,16 @@ jobs:
         run: |
           pip install requests beautifulsoup4 lxml
 
-      - name: Run tracker (no mail)
-        run: |
-          python price_tracker.py
+      - name: Run tracker (mail enabled)
+        env:
+          EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        run: python price_tracker.py
+
+      - name: Upload prices.json
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: price-data
+          path: prices.json
