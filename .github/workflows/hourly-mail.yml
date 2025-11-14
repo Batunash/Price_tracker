@@ -4,7 +4,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 * * * *"   # her saat başı
+    - cron: "0 */6 * * *"   # 6 saatte bir
   workflow_dispatch:
 
 jobs:
